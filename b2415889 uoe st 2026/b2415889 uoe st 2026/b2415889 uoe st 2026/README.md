@@ -63,7 +63,7 @@ rsa-sprint3/
 1. **Clone the repository**
 
    ```bash
-   git clone <repository-url>
+   git clone <https://github.com/Cx330-code/2026-St-uoe.git>
    cd rsa-sprint3
    ```
 
@@ -242,4 +242,5 @@ Mark
 ## Support
 
 For issues and questions, please open an issue in the repository.
+
 
