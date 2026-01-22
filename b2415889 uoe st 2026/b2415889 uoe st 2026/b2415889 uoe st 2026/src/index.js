@@ -3,20 +3,11 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const mongoose=require('mongoose');
+const jwt = require('jsonwebtoken');
 
+const connectDB = require('./config/db');
 
-
-mongoose.connect('mongodb://localhost:27017/rsa', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-})
-    .then(() => {
-        console.log('Connected to MongoDB');
-    })
-    .catch((err) => {
-        console.error('Error connecting to MongoDB:', err.message);
-    });
+connectDB();
 
 
 
@@ -33,7 +24,11 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 const chatRoutes = require('./routes/chatRoutes');
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 app.use('/api/chat', chatRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // Routes (placeholder)
 app.get('/', (req, res) => {
@@ -42,6 +37,22 @@ app.get('/', (req, res) => {
 
 // Socket.IO connection
 const ChatMessage = require('./models/ChatMessage');
+
+io.use((socket, next) => {
+    const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(' ')[1];
+    if (!token) {
+        socket.user = null;
+        return next();
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        socket.user = decoded;
+        return next();
+    } catch (error) {
+        return next(new Error('Invalid token'));
+    }
+});
 
 io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id}`);
@@ -75,15 +86,21 @@ io.on('connection', (socket) => {
     });
 
     socket.on('typing', ({ roomId, isTyping }) => {
+        if (!socket.user?.id) {
+            return;
+        }
         // Broadcast the typing event to everyone in the room except the sender
         socket.to(roomId).emit('typing', {
-            user: socket.user.userId, // Include user ID to identify who is typing
+            user: socket.user.id, // Include user ID to identify who is typing
             isTyping,
         });
     });
     
     socket.on('read_message', async ({ messageId, roomId }) => {
-        const userId = socket.user.userId;
+        if (!socket.user?.id) {
+            return;
+        }
+        const userId = socket.user.id;
     
         try {
             // Update the message to mark it as read
