@@ -1,4 +1,4 @@
-# Roadside Assistance (RSA) - Real-Time Chat Application
+# Real-Time Chat Application
 
 A real-time chat application built with Node.js, Express, Socket.IO, and MongoDB. This application provides instant messaging capabilities with features like room-based chats, typing indicators, read receipts, and user authentication.
 
@@ -242,4 +242,5 @@ Mark Wong
 ## Support
 
 For issues and questions, please open an issue in the repository.
+
 
