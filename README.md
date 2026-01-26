@@ -237,8 +237,9 @@ ISC
 
 ## Author
 
-Your Name
+Mark Wong
 
 ## Support
 
 For issues and questions, please open an issue in the repository.
+
