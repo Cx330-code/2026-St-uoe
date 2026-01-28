@@ -214,4 +214,39 @@ describe("ResponseHandler Utility - Unit Tests", () => {
       expect(callOrder).toEqual(["status", "json"]);
     });
   });
+
+  describe("Module Structure", () => {
+    test("should be a class/function", () => {
+      expect(typeof ResponseHandler).toBe("function");
+    });
+
+    test("should have success method", () => {
+      expect(ResponseHandler.success).toBeDefined();
+    });
+
+    test("should have error method", () => {
+      expect(ResponseHandler.error).toBeDefined();
+    });
+
+    test("success should be a function", () => {
+      expect(typeof ResponseHandler.success).toBe("function");
+    });
+
+    test("error should be a function", () => {
+      expect(typeof ResponseHandler.error).toBe("function");
+    });
+
+    test("should not throw on success call", () => {
+      expect(() => ResponseHandler.success(mockRes, 200, "test")).not.toThrow();
+    });
+
+    test("should not throw on error call", () => {
+      expect(() => ResponseHandler.error(mockRes, 400, "test")).not.toThrow();
+    });
+
+    test("should call status method", () => {
+      ResponseHandler.success(mockRes, 200, "test");
+      expect(mockRes.status).toHaveBeenCalled();
+    });
+  });
 });

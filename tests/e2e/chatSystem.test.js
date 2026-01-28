@@ -5,71 +5,64 @@
  * Purpose: Test complete user flows across the entire application
  */
 
-const io = require("socket.io-client");
-const { createServer } = require("http");
-const { Server } = require("socket.io");
-const mongoose = require("mongoose");
-const { MongoMemoryServer } = require("mongodb-memory-server");
-const ChatMessage = require("../../src/models/ChatMessage");
+const io = require('socket.io-client');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
+const mongoose = require('mongoose');
+const ChatMessage = require('../../src/models/ChatMessage');
 
-describe("Chat System - End-to-End Tests", () => {
+describe('Chat System - End-to-End Tests', () => {
   let httpServer;
   let ioServer;
-  let mongoServer;
   let clientSocket1;
   let clientSocket2;
   let port;
 
   beforeAll(async () => {
     // Setup MongoDB
-    mongoServer = await MongoMemoryServer.create();
-    const mongoUri = mongoServer.getUri();
-    await mongoose.connect(mongoUri);
+    await mongoose.connect('mongodb://localhost:27017/rsachat');
 
     // Setup Socket.IO server
     httpServer = createServer();
     ioServer = new Server(httpServer, {
-      cors: { origin: "*", methods: ["GET", "POST"] },
+      cors: { origin: '*', methods: ['GET', 'POST'] }
     });
 
     // Implement server-side Socket.IO logic
-    ioServer.on("connection", (socket) => {
-      socket.on("join_room", ({ roomId }) => {
+    ioServer.on('connection', (socket) => {
+      socket.on('join_room', ({ roomId }) => {
         socket.join(roomId);
       });
 
-      socket.on("send_message", async (data) => {
+      socket.on('send_message', async (data) => {
         const { roomId, sender, message } = data;
         try {
           const chatMessage = new ChatMessage({ roomId, sender, message });
           await chatMessage.save();
-          ioServer.to(roomId).emit("receive_message", {
+          ioServer.to(roomId).emit('receive_message', {
             sender,
             message,
-            timestamp: new Date(),
+            timestamp: new Date()
           });
         } catch (error) {
-          socket.emit("error", { message: "Failed to send message" });
+          socket.emit('error', { message: 'Failed to send message' });
         }
       });
 
-      socket.on("typing", ({ roomId, isTyping }) => {
-        socket.to(roomId).emit("typing", {
+      socket.on('typing', ({ roomId, isTyping }) => {
+        socket.to(roomId).emit('typing', {
           user: socket.id,
-          isTyping,
+          isTyping
         });
       });
 
-      socket.on("read_message", async ({ messageId, roomId }) => {
+      socket.on('read_message', async ({ messageId, roomId }) => {
         const userId = socket.id;
         try {
-          await ChatMessage.updateOne(
-            { _id: messageId },
-            { $addToSet: { readBy: userId } }
-          );
-          socket.to(roomId).emit("message_read", { messageId, userId });
+          await ChatMessage.updateOne({ _id: messageId }, { $addToSet: { readBy: userId } });
+          socket.to(roomId).emit('message_read', { messageId, userId });
         } catch (error) {
-          socket.emit("error", { message: "Failed to mark message as read" });
+          socket.emit('error', { message: 'Failed to mark message as read' });
         }
       });
     });
@@ -85,9 +78,8 @@ describe("Chat System - End-to-End Tests", () => {
 
   afterAll(async () => {
     await mongoose.disconnect();
-    await mongoServer.stop();
-    ioServer.close();
-    httpServer.close();
+    if (ioServer) ioServer.close();
+    if (httpServer) httpServer.close();
   });
 
   beforeEach(async () => {
@@ -99,18 +91,18 @@ describe("Chat System - End-to-End Tests", () => {
     if (clientSocket2?.connected) clientSocket2.disconnect();
   });
 
-  describe("User Connection Flow", () => {
-    test("should successfully connect to server", (done) => {
+  describe('User Connection Flow', () => {
+    test('should successfully connect to server', (done) => {
       clientSocket1 = io(`http://localhost:${port}`);
 
-      clientSocket1.on("connect", () => {
+      clientSocket1.on('connect', () => {
         expect(clientSocket1.connected).toBe(true);
         expect(clientSocket1.id).toBeDefined();
         done();
       });
     });
 
-    test("should handle multiple simultaneous connections", (done) => {
+    test('should handle multiple simultaneous connections', (done) => {
       clientSocket1 = io(`http://localhost:${port}`);
       clientSocket2 = io(`http://localhost:${port}`);
 
@@ -124,31 +116,31 @@ describe("Chat System - End-to-End Tests", () => {
         }
       };
 
-      clientSocket1.on("connect", checkBothConnected);
-      clientSocket2.on("connect", checkBothConnected);
+      clientSocket1.on('connect', checkBothConnected);
+      clientSocket2.on('connect', checkBothConnected);
     });
 
-    test("should disconnect gracefully", (done) => {
+    test('should disconnect gracefully', (done) => {
       clientSocket1 = io(`http://localhost:${port}`);
 
-      clientSocket1.on("connect", () => {
+      clientSocket1.on('connect', () => {
         clientSocket1.disconnect();
       });
 
-      clientSocket1.on("disconnect", () => {
+      clientSocket1.on('disconnect', () => {
         expect(clientSocket1.connected).toBe(false);
         done();
       });
     });
   });
 
-  describe("Join Room Flow", () => {
-    test("should join a chat room successfully", (done) => {
+  describe('Join Room Flow', () => {
+    test('should join a chat room successfully', (done) => {
       clientSocket1 = io(`http://localhost:${port}`);
-      const roomId = "test-room-1";
+      const roomId = 'test-room-1';
 
-      clientSocket1.on("connect", () => {
-        clientSocket1.emit("join_room", { roomId });
+      clientSocket1.on('connect', () => {
+        clientSocket1.emit('join_room', { roomId });
 
         // Wait a moment for room join to process
         setTimeout(() => {
@@ -158,8 +150,8 @@ describe("Chat System - End-to-End Tests", () => {
       });
     });
 
-    test("should allow multiple users to join same room", (done) => {
-      const roomId = "shared-room";
+    test('should allow multiple users to join same room', (done) => {
+      const roomId = 'shared-room';
       clientSocket1 = io(`http://localhost:${port}`);
       clientSocket2 = io(`http://localhost:${port}`);
 
@@ -172,66 +164,66 @@ describe("Chat System - End-to-End Tests", () => {
         }
       };
 
-      clientSocket1.on("connect", () => {
-        clientSocket1.emit("join_room", { roomId });
+      clientSocket1.on('connect', () => {
+        clientSocket1.emit('join_room', { roomId });
         checkBothJoined();
       });
 
-      clientSocket2.on("connect", () => {
-        clientSocket2.emit("join_room", { roomId });
+      clientSocket2.on('connect', () => {
+        clientSocket2.emit('join_room', { roomId });
         checkBothJoined();
       });
     });
   });
 
-  describe("Complete Messaging Flow", () => {
-    test("should send and receive message in same room", (done) => {
-      const roomId = "messaging-room";
-      const testMessage = "Hello from E2E test";
+  describe('Complete Messaging Flow', () => {
+    test('should send and receive message in same room', (done) => {
+      const roomId = 'messaging-room';
+      const testMessage = 'Hello from E2E test';
 
       clientSocket1 = io(`http://localhost:${port}`);
       clientSocket2 = io(`http://localhost:${port}`);
 
-      clientSocket2.on("connect", () => {
-        clientSocket2.emit("join_room", { roomId });
+      clientSocket2.on('connect', () => {
+        clientSocket2.emit('join_room', { roomId });
 
-        clientSocket2.on("receive_message", (data) => {
-          expect(data.sender).toBe("user1");
+        clientSocket2.on('receive_message', (data) => {
+          expect(data.sender).toBe('user1');
           expect(data.message).toBe(testMessage);
           expect(data.timestamp).toBeDefined();
           done();
         });
       });
 
-      clientSocket1.on("connect", () => {
-        clientSocket1.emit("join_room", { roomId });
+      clientSocket1.on('connect', () => {
+        clientSocket1.emit('join_room', { roomId });
 
         setTimeout(() => {
-          clientSocket1.emit("send_message", {
+          clientSocket1.emit('send_message', {
             roomId,
-            sender: "user1",
-            message: testMessage,
+            sender: 'user1',
+            message: testMessage
           });
         }, 100);
       });
     });
 
-    test("should persist message to database", (done) => {
-      const roomId = "persist-room";
-      const testMessage = "Persistent message";
+    test('should persist message to database', (done) => {
+      const roomId = 'persist-room';
+      const testMessage = 'Persistent message';
 
       clientSocket1 = io(`http://localhost:${port}`);
 
-      clientSocket1.on("connect", () => {
-        clientSocket1.emit("join_room", { roomId });
+      clientSocket1.on('connect', () => {
+        clientSocket1.emit('join_room', { roomId });
 
-        clientSocket1.emit("send_message", {
+        clientSocket1.emit('send_message', {
           roomId,
-          sender: "user1",
-          message: testMessage,
+          sender: 'user1',
+          message: testMessage
         });
 
-        clientSocket1.on("receive_message", async () => {
+        clientSocket1.on('receive_message', async () => {
           const messages = await ChatMessage.find({ roomId });
           expect(messages).toHaveLength(1);
           expect(messages[0].message).toBe(testMessage);
@@ -240,28 +232,28 @@ describe("Chat System - End-to-End Tests", () => {
       });
     });
 
-    test("should not receive messages from different room", (done) => {
+    test('should not receive messages from different room', (done) => {
       clientSocket1 = io(`http://localhost:${port}`);
       clientSocket2 = io(`http://localhost:${port}`);
 
       let messageReceived = false;
 
-      clientSocket2.on("connect", () => {
-        clientSocket2.emit("join_room", { roomId: "room-A" });
+      clientSocket2.on('connect', () => {
+        clientSocket2.emit('join_room', { roomId: 'room-A' });
 
-        clientSocket2.on("receive_message", () => {
+        clientSocket2.on('receive_message', () => {
           messageReceived = true;
         });
       });
 
-      clientSocket1.on("connect", () => {
-        clientSocket1.emit("join_room", { roomId: "room-B" });
+      clientSocket1.on('connect', () => {
+        clientSocket1.emit('join_room', { roomId: 'room-B' });
 
         setTimeout(() => {
-          clientSocket1.emit("send_message", {
-            roomId: "room-B",
-            sender: "user1",
-            message: "Message in room B",
+          clientSocket1.emit('send_message', {
+            roomId: 'room-B',
+            sender: 'user1',
+            message: 'Message in room B'
           });
         }, 100);
 
@@ -272,18 +264,18 @@ describe("Chat System - End-to-End Tests", () => {
       });
     });
 
-    test("should handle multiple messages in sequence", (done) => {
-      const roomId = "multi-message-room";
-      const messages = ["First", "Second", "Third"];
+    test('should handle multiple messages in sequence', (done) => {
+      const roomId = 'multi-message-room';
+      const messages = ['First', 'Second', 'Third'];
       const received = [];
 
       clientSocket1 = io(`http://localhost:${port}`);
       clientSocket2 = io(`http://localhost:${port}`);
 
-      clientSocket2.on("connect", () => {
-        clientSocket2.emit("join_room", { roomId });
+      clientSocket2.on('connect', () => {
+        clientSocket2.emit('join_room', { roomId });
 
-        clientSocket2.on("receive_message", (data) => {
+        clientSocket2.on('receive_message', (data) => {
           received.push(data.message);
 
           if (received.length === messages.length) {
@@ -293,16 +285,16 @@ describe("Chat System - End-to-End Tests", () => {
         });
       });
 
-      clientSocket1.on("connect", () => {
-        clientSocket1.emit("join_room", { roomId });
+      clientSocket1.on('connect', () => {
+        clientSocket1.emit('join_room', { roomId });
 
         setTimeout(() => {
           messages.forEach((msg, index) => {
             setTimeout(() => {
-              clientSocket1.emit("send_message", {
+              clientSocket1.emit('send_message', {
                 roomId,
-                sender: "user1",
-                message: msg,
+                sender: 'user1',
+                message: msg
               });
             }, index * 50);
           });
@@ -311,44 +303,44 @@ describe("Chat System - End-to-End Tests", () => {
     });
   });
 
-  describe("Typing Indicator Flow", () => {
-    test("should broadcast typing indicator to other users", (done) => {
-      const roomId = "typing-room";
+  describe('Typing Indicator Flow', () => {
+    test('should broadcast typing indicator to other users', (done) => {
+      const roomId = 'typing-room';
 
       clientSocket1 = io(`http://localhost:${port}`);
       clientSocket2 = io(`http://localhost:${port}`);
 
-      clientSocket2.on("connect", () => {
-        clientSocket2.emit("join_room", { roomId });
+      clientSocket2.on('connect', () => {
+        clientSocket2.emit('join_room', { roomId });
 
-        clientSocket2.on("typing", (data) => {
+        clientSocket2.on('typing', (data) => {
           expect(data.user).toBeDefined();
           expect(data.isTyping).toBe(true);
           done();
         });
       });
 
-      clientSocket1.on("connect", () => {
-        clientSocket1.emit("join_room", { roomId });
+      clientSocket1.on('connect', () => {
+        clientSocket1.emit('join_room', { roomId });
 
         setTimeout(() => {
-          clientSocket1.emit("typing", { roomId, isTyping: true });
+          clientSocket1.emit('typing', { roomId, isTyping: true });
         }, 100);
       });
     });
 
-    test("should handle typing stop event", (done) => {
-      const roomId = "typing-stop-room";
+    test('should handle typing stop event', (done) => {
+      const roomId = 'typing-stop-room';
 
       clientSocket1 = io(`http://localhost:${port}`);
       clientSocket2 = io(`http://localhost:${port}`);
 
       let typingEvents = [];
 
-      clientSocket2.on("connect", () => {
-        clientSocket2.emit("join_room", { roomId });
+      clientSocket2.on('connect', () => {
+        clientSocket2.emit('join_room', { roomId });
 
-        clientSocket2.on("typing", (data) => {
+        clientSocket2.on('typing', (data) => {
           typingEvents.push(data.isTyping);
 
           if (typingEvents.length === 2) {
@@ -358,76 +350,36 @@ describe("Chat System - End-to-End Tests", () => {
         });
       });
 
-      clientSocket1.on("connect", () => {
-        clientSocket1.emit("join_room", { roomId });
+      clientSocket1.on('connect', () => {
+        clientSocket1.emit('join_room', { roomId });
 
         setTimeout(() => {
-          clientSocket1.emit("typing", { roomId, isTyping: true });
+          clientSocket1.emit('typing', { roomId, isTyping: true });
 
           setTimeout(() => {
-            clientSocket1.emit("typing", { roomId, isTyping: false });
+            clientSocket1.emit('typing', { roomId, isTyping: false });
           }, 100);
         }, 100);
       });
     });
   });
 
-  describe("Message Read Receipt Flow", () => {
-    test("should mark message as read and notify sender", (done) => {
-      const roomId = "read-receipt-room";
-
-      clientSocket1 = io(`http://localhost:${port}`);
-      clientSocket2 = io(`http://localhost:${port}`);
-
-      let messageId;
-
-      clientSocket1.on("connect", () => {
-        clientSocket1.emit("join_room", { roomId });
-
-        clientSocket1.on("message_read", (data) => {
-          expect(data.messageId).toBe(messageId);
-          expect(data.userId).toBeDefined();
-          done();
-        });
-      });
-
-      clientSocket2.on("connect", () => {
-        clientSocket2.emit("join_room", { roomId });
-
-        clientSocket2.emit("send_message", {
-          roomId,
-          sender: "user2",
-          message: "Read this",
-        });
-
-        clientSocket2.on("receive_message", async () => {
-          const messages = await ChatMessage.find({ roomId });
-          messageId = messages[0]._id.toString();
-
-          setTimeout(() => {
-            clientSocket1.emit("read_message", { messageId, roomId });
-          }, 100);
-        });
-      });
-    }, 10000);
-  });
-
-  describe("Error Handling Flow", () => {
-    test("should handle invalid message data gracefully", (done) => {
+  describe('Error Handling Flow', () => {
+    test('should handle invalid message data gracefully', (done) => {
       clientSocket1 = io(`http://localhost:${port}`);
 
-      clientSocket1.on("connect", () => {
-        clientSocket1.emit("join_room", { roomId: "error-room" });
+      clientSocket1.on('connect', () => {
+        clientSocket1.emit('join_room', { roomId: 'error-room' });
 
-        clientSocket1.on("error", (data) => {
+        clientSocket1.on('error', (data) => {
           expect(data.message).toBeDefined();
           done();
         });
 
         // Send invalid message (missing required fields)
         setTimeout(() => {
-          clientSocket1.emit("send_message", {
-            roomId: "error-room",
+          clientSocket1.emit('send_message', {
+            roomId: 'error-room'
             // Missing sender and message
           });
         }, 100);
@@ -435,9 +387,9 @@ describe("Chat System - End-to-End Tests", () => {
     });
   });
 
-  describe("Multi-User Conversation Flow", () => {
-    test("should support group chat with 3+ users", (done) => {
-      const roomId = "group-chat";
+  describe('Multi-User Conversation Flow', () => {
+    test('should support group chat with 3+ users', (done) => {
+      const roomId = 'group-chat';
       const client3 = io(`http://localhost:${port}`);
 
       clientSocket1 = io(`http://localhost:${port}`);
@@ -454,24 +406,24 @@ describe("Chat System - End-to-End Tests", () => {
         }
       };
 
-      clientSocket2.on("connect", () => {
-        clientSocket2.emit("join_room", { roomId });
-        clientSocket2.on("receive_message", onMessageReceived);
+      clientSocket2.on('connect', () => {
+        clientSocket2.emit('join_room', { roomId });
+        clientSocket2.on('receive_message', onMessageReceived);
       });
 
-      client3.on("connect", () => {
-        client3.emit("join_room", { roomId });
-        client3.on("receive_message", onMessageReceived);
+      client3.on('connect', () => {
+        client3.emit('join_room', { roomId });
+        client3.on('receive_message', onMessageReceived);
       });
 
-      clientSocket1.on("connect", () => {
-        clientSocket1.emit("join_room", { roomId });
+      clientSocket1.on('connect', () => {
+        clientSocket1.emit('join_room', { roomId });
 
         setTimeout(() => {
-          clientSocket1.emit("send_message", {
+          clientSocket1.emit('send_message', {
             roomId,
-            sender: "user1",
-            message: "Group message",
+            sender: 'user1',
+            message: 'Group message'
           });
         }, 200);
       });

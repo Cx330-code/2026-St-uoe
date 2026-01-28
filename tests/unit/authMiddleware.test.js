@@ -260,4 +260,54 @@ describe('authMiddleware - Unit Tests', () => {
       expect(mockReq.params).toEqual({ id: '456' });
     });
   });
+
+  describe('Middleware Basics', () => {
+    test('should be a function', () => {
+      expect(typeof authMiddleware).toBe('function');
+    });
+
+    test('should accept three arguments', () => {
+      expect(authMiddleware.length).toBe(3);
+    });
+
+    test('should not throw with valid token', () => {
+      const token = jwt.sign({ id: 'user123' }, process.env.JWT_SECRET);
+      mockReq.headers.authorization = `Bearer ${token}`;
+      expect(() => authMiddleware(mockReq, mockRes, mockNext)).not.toThrow();
+    });
+
+    test('should call next exactly once on success', () => {
+      const token = jwt.sign({ id: 'user123' }, process.env.JWT_SECRET);
+      mockReq.headers.authorization = `Bearer ${token}`;
+      authMiddleware(mockReq, mockRes, mockNext);
+      expect(mockNext).toHaveBeenCalledTimes(1);
+    });
+
+    test('should call next with no arguments', () => {
+      const token = jwt.sign({ id: 'user123' }, process.env.JWT_SECRET);
+      mockReq.headers.authorization = `Bearer ${token}`;
+      authMiddleware(mockReq, mockRes, mockNext);
+      expect(mockNext).toHaveBeenCalledWith();
+    });
+
+    test('should not call next on invalid token', () => {
+      mockReq.headers.authorization = 'Bearer invalid';
+      mockNext.mockClear();
+      authMiddleware(mockReq, mockRes, mockNext);
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    test('should set status before json', () => {
+      mockReq.headers = {};
+      authMiddleware(mockReq, mockRes, mockNext);
+      expect(mockRes.status).toHaveBeenCalled();
+    });
+
+    test('should work with lowercase bearer', () => {
+      const token = jwt.sign({ id: 'user123' }, process.env.JWT_SECRET);
+      mockReq.headers.authorization = `bearer ${token}`;
+      authMiddleware(mockReq, mockRes, mockNext);
+      expect(mockNext).toHaveBeenCalled();
+    });
+  });
 });

@@ -118,4 +118,48 @@ describe("hashPassword Utility - Unit Tests", () => {
       expect(duration).toBeLessThan(1000);
     });
   });
+
+  describe("Basic Properties", () => {
+    test("should return a string type", async () => {
+      const result = await hashPassword("test");
+      expect(typeof result).toBe("string");
+    });
+
+    test("should return non-empty string", async () => {
+      const result = await hashPassword("password");
+      expect(result.length).toBeGreaterThan(0);
+    });
+
+    test("should produce hash longer than input", async () => {
+      const input = "short";
+      const result = await hashPassword(input);
+      expect(result.length).toBeGreaterThan(input.length);
+    });
+
+    test("should contain bcrypt prefix", async () => {
+      const result = await hashPassword("test");
+      expect(result.startsWith("$2")).toBe(true);
+    });
+
+    test("should handle single character", async () => {
+      const result = await hashPassword("a");
+      expect(result).toBeTruthy();
+    });
+
+    test("should handle numeric strings", async () => {
+      const result = await hashPassword("123456");
+      expect(result).toBeTruthy();
+    });
+
+    test("should handle mixed case", async () => {
+      const result = await hashPassword("TeSt");
+      expect(result).toBeTruthy();
+    });
+
+    test("should not return original password", async () => {
+      const password = "secretPassword";
+      const result = await hashPassword(password);
+      expect(result).not.toBe(password);
+    });
+  });
 });

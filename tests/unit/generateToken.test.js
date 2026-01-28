@@ -194,4 +194,50 @@ describe('generateToken Utility - Unit Tests', () => {
       expect(duration).toBeLessThan(1000);
     });
   });
+
+  describe("Token Structure", () => {
+    test("should return a string", () => {
+      const token = generateAccessToken({ id: 1 });
+      expect(typeof token).toBe("string");
+    });
+
+    test("should not be empty", () => {
+      const token = generateAccessToken({ id: 1 });
+      expect(token.length).toBeGreaterThan(0);
+    });
+
+    test("should have three parts", () => {
+      const token = generateAccessToken({ id: 1 });
+      const parts = token.split(".");
+      expect(parts).toHaveLength(3);
+    });
+
+    test("should have non-empty header", () => {
+      const token = generateAccessToken({ id: 1 });
+      const parts = token.split(".");
+      expect(parts[0].length).toBeGreaterThan(0);
+    });
+
+    test("should have non-empty payload", () => {
+      const token = generateAccessToken({ id: 1 });
+      const parts = token.split(".");
+      expect(parts[1].length).toBeGreaterThan(0);
+    });
+
+    test("should have non-empty signature", () => {
+      const token = generateAccessToken({ id: 1 });
+      const parts = token.split(".");
+      expect(parts[2].length).toBeGreaterThan(0);
+    });
+
+    test("should handle empty object payload", () => {
+      const token = generateAccessToken({});
+      expect(token).toBeTruthy();
+    });
+
+    test("should handle payload with multiple fields", () => {
+      const token = generateAccessToken({ id: 1, role: "admin", active: true });
+      expect(token).toBeTruthy();
+    });
+  });
 });
