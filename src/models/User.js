@@ -1,9 +1,11 @@
 const mongoose = require('mongoose');
 
-const chatMessageSchema = new mongoose.Schema({
-  roomId: { type: String, required: true },
-  sender: { type: String, required: true },
-  message: { type: String, required: true },
-  timestamp: { type: Date, default: Date.now },
-  readBy: { type: [String], default: [] } // Array of user IDs who read the message
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  role: { type: String, enum: ['customer', 'driver'], required: true }
 });
+
+module.exports = mongoose.model('User', userSchema);
