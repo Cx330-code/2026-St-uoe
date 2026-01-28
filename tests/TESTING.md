@@ -2,7 +2,7 @@
 
 ## RSA Real-Time Chat Application
 
-**Author:** [Your Name]  
+**Author:** [Mark]  
 **Date:** January 19, 2026  
 **Module:** Software Testing and Verification  
 **System Under Test:** Roadside Assistance Real-Time Chat Application
@@ -1980,3 +1980,4 @@ The **CI/CD pipeline** provides fast, automatic feedback, preventing regressions
 **Last Updated:** January 19, 2026  
 **Total Pages:** 47  
 **Word Count:** ~12,000
+
